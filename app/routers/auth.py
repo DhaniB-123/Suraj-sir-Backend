@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from jose import jwt
 import os
-from firebase_admin import credentials, auth
-import firebase_admin 
+# from firebase_admin import credentials, auth
+# import firebase_admin 
 
 
 load_dotenv()
@@ -22,8 +22,8 @@ def create_access_token(data: dict):
     data.update({"exp": expire})
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
-cred = credentials.Certificate("firebase-credentials.json")
-firebase_admin.initialize_app(cred)
+# cred = credentials.Certificate("firebase-credentials.json")
+# firebase_admin.initialize_app(cred)
 
 router = APIRouter(prefix="/auth",tags=["Authentication"])
 @router.post("/send-otp")
