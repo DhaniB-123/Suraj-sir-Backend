@@ -5,6 +5,10 @@ import app.models
 
 app = FastAPI(title="Suraj Sir Backend")
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
 base.metadata.create_all(bind=engine)
 
 app.include_router(auth.router,prefix="/api")
