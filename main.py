@@ -1,10 +1,8 @@
 from fastapi import FastAPI
-from app.database import engine,base
-from app.routers import auth,content,unlock,admin
-import app.models
 from fastapi.middleware.cors import CORSMiddleware
-
-
+from app.database import engine, base
+from app import models
+from app.routers import auth, content, unlock, admin
 
 app = FastAPI(title="Suraj Sir Backend")
 
@@ -20,10 +18,9 @@ app.add_middleware(
 def health_check():
     return {"status": "ok"}
 
-
 base.metadata.create_all(bind=engine)
 
-app.include_router(auth.router,prefix="/api")
+app.include_router(auth.router, prefix="/api")
 app.include_router(content.router, prefix="/api")
 app.include_router(unlock.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
