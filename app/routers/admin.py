@@ -178,3 +178,16 @@ async def upload_file(
     db.refresh(content)
     
     return {"message": "Content uploaded", "url": result["secure_url"], "id": str(content.id)}
+
+
+@router.get("/revenue")
+def get_revenue(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
+    from sqlalchemy import func
+    total = db.query(func.sum(UnlockRequest.amount)).filter(
+        UnlockRequest.status == "approved"
+    ).scalar()
+    
+    return {"total_revenue": total or 0}
