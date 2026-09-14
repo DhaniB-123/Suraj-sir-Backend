@@ -1,4 +1,4 @@
-from sqlalchemy import Column,String,ForeignKey,DateTime,Boolean
+from sqlalchemy import Column,String,ForeignKey,DateTime,Boolean,Integer
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime,timezone
 from app.database import base
