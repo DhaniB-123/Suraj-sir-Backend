@@ -29,7 +29,7 @@ router = APIRouter(prefix="/auth",tags=["Authentication"])
 @router.post("/send-otp")
 async def send_otp(request : SendOTPRequest,db : Session = Depends(get_db)):
     try:
-        phone_number = f"+92{request.phone.lstrip('0')}"
+        phone_number = f"+91{request.phone.lstrip('0')}"
         try:
             auth.create_user(phone_number = phone_number)
         except Exception:
