@@ -59,6 +59,7 @@ def upload_content(
     url: str,
     topic_id: str,
     is_free: bool = False,
+    price: int = 0,
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
@@ -67,14 +68,14 @@ def upload_content(
         type=type,
         url=url,
         topic_id=topic_id,
-        is_free=is_free
+        is_free=is_free,
+        price=price
     )
     db.add(content)
     db.commit()
     db.refresh(content)
     
     return {"message": "Content uploaded", "content": {"id": str(content.id)}}
-
 
 @router.get("/content")
 def get_all_content(
