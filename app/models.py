@@ -41,6 +41,7 @@ class ContentItem(base):
     type = Column(String(50))
     url = Column(String(500))
     is_free = Column((Boolean))
+    price = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     topic_id = Column(UUID(as_uuid=True),ForeignKey("topics.id"))
 
@@ -52,6 +53,7 @@ class UnlockRequest(base):
     user_id = Column(UUID(as_uuid=True),ForeignKey("users.id"),nullable = False)
     content_id = Column(UUID(as_uuid=True),ForeignKey("content_items.id"),nullable=False)
     status = Column(String(30))
+    amount = Column(Integer, default=0)
     created_at = Column(DateTime,default=datetime.now(timezone.utc))
 
 
