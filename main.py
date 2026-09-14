@@ -1,24 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.cors import CORSMiddleware
-from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, base
 from app import models
 from app.routers import auth, content, unlock, admin
 
 app = FastAPI(title="Suraj Sir Backend")
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
-
-@app.get("/api/health")
-def health_check():
-    return {"status": "ok"}
 
 base.metadata.create_all(bind=engine)
 
