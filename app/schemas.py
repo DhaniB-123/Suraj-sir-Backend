@@ -24,3 +24,24 @@ class TokenResponse(BaseModel):
 class AdminLoginRequest(BaseModel):
     username: str
     password: str
+
+
+
+class ContentUploadRequest(BaseModel):
+    title: str
+    type: str
+    url: str
+    topic_id: str
+    is_free: bool = False
+    price: int = 0
+
+class UnlockRequestResponse(BaseModel):
+    id: str
+    user_id: str
+    content_id: str
+    status: str
+    amount: int = 0
+    created_at: str
+
+    class Config:
+        from_attributes = True
