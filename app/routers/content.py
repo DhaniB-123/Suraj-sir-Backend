@@ -12,12 +12,12 @@ def get_classes(db : Session = Depends(get_db)):
     classes = db.query(Class).all()
     return classes
 
-@router.get("/class/{class_id}/subject")
+@router.get("/class/{class_id}/subjects")  
 def get_subjects(class_id : str,db : Session = Depends(get_db)):
     subjects = db.query(Subject).filter(Subject.class_id == class_id).all()
     return subjects
 
-@router.get("subject/{subject_id}/topics")
+@router.get("/subject/{subject_id}/topics")
 def get_topics(subject_id : str, db : Session = Depends(get_db)):
     topics = db.query(Topic).filter(Topic.subject_id == subject_id)
     return topics
