@@ -23,21 +23,33 @@ def get_unlock_request(db : Session = Depends(get_db),current_user : dict = Depe
     return requests
 
 @router.post("/unlock-requests/{request_id}/approve")
-def approve_unlock(request_id : str,db : Session = Depends(get_db),current_user : dict = Depends(admin_only)):
+def approve_unlock(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
     req = db.query(UnlockRequest).filter(UnlockRequest.id == request_id).first()
     if not req:
-        raise HTTPException(status_code=400,detail="Request not found!")
+        raise HTTPException(status_code=400, detail="Request not found")
     if req.status != "pending":
-        raise HTTPException(status_code = 400,detail = "Request not found!")
-
+        raise HTTPException(status_code=400, detail="Request already processed")
+    
+    # Content ka price lo
+    from app.models import ContentItem
+    content = db.query(ContentItem).filter(ContentItem.id == req.content_id).first()
+    price = content.price if content else 0
+    
     req.status = "approved"
-
-    unlock = UnlockContent(user_id = req.user_id,content_id = req.content_id)
-
+    req.amount = price  # Revenue save karo
+    
+    unlock = UnlockContent(
+        user_id=req.user_id,
+        content_id=req.content_id
+    )
     db.add(unlock)
     db.commit()
-
-    return {"message" : "unlock approved"}
+    
+    return {"message": "Unlock approved"}
 
 @router.post("/unlock-request/{request_id}/reject")
 def reject_unlock(request_id : str,db : Session = Depends(get_db),current_user : dict = Depends(admin_only)):
