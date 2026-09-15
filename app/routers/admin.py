@@ -1,15 +1,12 @@
-from fastapi import APIRouter,Depends,HTTPException
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import UnlockRequest,UnlockContent,ContentItem,Subject,Topic,Class
-from app.dependencies import admin_only
+import os
 import cloudinary
 import cloudinary.uploader
-from fastapi import UploadFile, File
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import Response
-from app.models import User
-import os
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.dependencies import admin_only
+from app.models import UnlockRequest, UnlockContent, ContentItem, Subject, Topic, Class, User
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -17,19 +14,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-router = APIRouter(prefix="/admin",tags=["Admin"])
-
-
-@router.options("/{path:path}")
-async def admin_options(path: str):
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @router.get("/unlock-requests")
@@ -38,18 +23,20 @@ def get_unlock_requests(
     current_user: dict = Depends(admin_only)
 ):
     requests = db.query(UnlockRequest).all()
-    return JSONResponse(
-        content=[{
-        "id": str(r.id),
-        "status": r.status,
-        "user_id": str(r.user_id),
-        "content_id": str(r.content_id),
-        "amount": r.amount,
-        "created_at": str(r.created_at),
-        "student_phone": db.query(User).filter(User.id == r.user_id).first().phone if db.query(User).filter(User.id == r.user_id).first() else "Unknown"
-    } for r in requests],
-        headers={"Access-Control-Allow-Origin": "*"}
-    )
+    output = []
+    for r in requests:
+        user = db.query(User).filter(User.id == r.user_id).first()
+        output.append({
+            "id": str(r.id),
+            "status": r.status,
+            "user_id": str(r.user_id),
+            "content_id": str(r.content_id),
+            "amount": r.amount,
+            "created_at": str(r.created_at),
+            "student_phone": user.phone if user else "Unknown"
+        })
+    return output
+
 
 @router.post("/unlock-requests/{request_id}/approve")
 def approve_unlock(
@@ -63,13 +50,11 @@ def approve_unlock(
     if req.status != "pending":
         raise HTTPException(status_code=400, detail="Request already processed")
     
-    # Content ka price lo
-    from app.models import ContentItem
     content = db.query(ContentItem).filter(ContentItem.id == req.content_id).first()
     price = content.price if content else 0
     
     req.status = "approved"
-    req.amount = price  # Revenue save karo
+    req.amount = price
     
     unlock = UnlockContent(
         user_id=req.user_id,
@@ -80,17 +65,22 @@ def approve_unlock(
     
     return {"message": "Unlock approved"}
 
-@router.post("/unlock-request/{request_id}/reject")
-def reject_unlock(request_id : str,db : Session = Depends(get_db),current_user : dict = Depends(admin_only)):
+
+@router.post("/unlock-requests/{request_id}/reject")
+def reject_unlock(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
     req = db.query(UnlockRequest).filter(UnlockRequest.id == request_id).first()
     if not req:
-        raise HTTPException(status_code=400,detail="Request not found")
+        raise HTTPException(status_code=400, detail="Request not found")
     if req.status != "pending":
-        raise HTTPException(status_code = 400,detail = "Request already processed")
+        raise HTTPException(status_code=400, detail="Request already processed")
 
     req.status = "rejected"
     db.commit()
-    return {"message" : "unlock rejected"}
+    return {"message": "Unlock rejected"}
 
 
 @router.post("/upload")
@@ -115,10 +105,8 @@ def upload_content(
     db.add(content)
     db.commit()
     db.refresh(content)
-    
     return {"message": "Content uploaded", "content": {"id": str(content.id)}}
 
-from fastapi.responses import JSONResponse
 
 @router.get("/content")
 def get_all_content(
@@ -126,29 +114,29 @@ def get_all_content(
     current_user: dict = Depends(admin_only)
 ):
     contents = db.query(ContentItem).all()
-    return JSONResponse(
-        content=[{
-            "id": str(c.id),
-            "title": c.title,
-            "type": c.type,
-            "is_free": c.is_free,
-            "price": c.price,
-            "created_at": str(c.created_at)
-        } for c in contents],
-        headers={"Access-Control-Allow-Origin": "*"}
-    )
+    return [{
+        "id": str(c.id),
+        "title": c.title,
+        "type": c.type,
+        "is_free": c.is_free,
+        "price": c.price,
+        "created_at": str(c.created_at)
+    } for c in contents]
 
 
 @router.delete("/content/{content_id}")
-def delete_content(content_id : str,db : Session = Depends(get_db), current_user: dict  = Depends(get_db),currrent_user = Depends(admin_only)):
-    content = db.query(ContentItem).fitler(ContentItem.content_id).first()
+def delete_content(
+    content_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
+    content = db.query(ContentItem).filter(ContentItem.id == content_id).first()
     if not content:
-        raise HTTPException(status_code = 404,detail = "content not found!")
+        raise HTTPException(status_code=404, detail="Content not found!")
 
     db.delete(content)
     db.commit()
-
-    return {"message" : "Content deleted"}
+    return {"message": "Content deleted"}
 
 
 @router.post("/classes")
@@ -177,6 +165,7 @@ def add_subject(
     db.refresh(new_subject)
     return {"message": "Subject added", "id": str(new_subject.id)}
 
+
 @router.post("/topics")
 def add_topic(
     name: str,
@@ -201,10 +190,9 @@ async def upload_file(
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
-    # Cloudinary pe upload karo
     result = cloudinary.uploader.upload(
         file.file,
-        resource_type="auto"  # video, image, pdf sab handle karega
+        resource_type="auto"
     )
     
     content = ContentItem(
