@@ -103,13 +103,25 @@ def upload_content(
     
     return {"message": "Content uploaded", "content": {"id": str(content.id)}}
 
+from fastapi.responses import JSONResponse
+
 @router.get("/content")
 def get_all_content(
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
     contents = db.query(ContentItem).all()
-    return contents
+    return JSONResponse(
+        content=[{
+            "id": str(c.id),
+            "title": c.title,
+            "type": c.type,
+            "is_free": c.is_free,
+            "price": c.price,
+            "created_at": str(c.created_at)
+        } for c in contents],
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 
 @router.delete("/content/{content_id}")
