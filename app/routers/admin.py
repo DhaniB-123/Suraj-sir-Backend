@@ -1,7 +1,8 @@
 import os
 import cloudinary
 import cloudinary.uploader
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -19,50 +20,112 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.get("/unlock-requests")
 def get_unlock_requests(
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
-    requests = db.query(UnlockRequest).all()
+    query = db.query(UnlockRequest)
+    if status:
+        query = query.filter(UnlockRequest.status == status)
+    
+    requests = query.all()
     output = []
+    
     for r in requests:
-        user = db.query(User).filter(User.id == r.user_id).first()
+        user = db.query(User).filter(str(User.id) == str(r.user_id)).first()
+        phone_val = getattr(user, "phone", None) or getattr(user, "phone_number", None) or getattr(user, "mobile", None) if user else "Unknown"
+        if not phone_val:
+            phone_val = "Unknown"
+
         output.append({
             "id": str(r.id),
             "status": r.status,
             "user_id": str(r.user_id),
             "content_id": str(r.content_id),
-            "amount": r.amount,
+            "amount": r.amount or 0,
             "created_at": str(r.created_at),
-            "student_phone": user.phone if user else "Unknown"
+            "student_phone": phone_val,
+            "phone": phone_val,
+            "phone_number": phone_val,
+            "user_phone": phone_val,
+            "user": {"phone": phone_val, "phone_number": phone_val} if user else None
         })
     return output
 
 
+# Universal Endpoint: Handles direct POST/PATCH/PUT updates from Lovable UI
+@router.api_route("/unlock-requests/{request_id}", methods=["POST", "PATCH", "PUT"])
+async def update_unlock_request(
+    request_id: str,
+    request: Request,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
+    req = db.query(UnlockRequest).filter(str(UnlockRequest.id) == str(request_id)).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Unlock request not found")
+
+    # Extract status from JSON body or query string
+    target_status = status
+    try:
+        body = await request.json()
+        if isinstance(body, dict) and "status" in body:
+            target_status = body["status"]
+    except Exception:
+        pass
+
+    if not target_status:
+        target_status = "approved"
+
+    if target_status == "approved":
+        content = db.query(ContentItem).filter(ContentItem.id == req.content_id).first()
+        price = content.price if content else 0
+        req.status = "approved"
+        req.amount = price
+
+        existing_unlock = db.query(UnlockContent).filter(
+            UnlockContent.user_id == req.user_id,
+            UnlockContent.content_id == req.content_id
+        ).first()
+
+        if not existing_unlock:
+            unlock = UnlockContent(
+                user_id=req.user_id,
+                content_id=req.content_id
+            )
+            db.add(unlock)
+
+    elif target_status == "rejected":
+        req.status = "rejected"
+
+    db.commit()
+    return {"message": f"Request status updated to {target_status}"}
+
+
+# Legacy fallback routes
 @router.post("/unlock-requests/{request_id}/approve")
 def approve_unlock(
     request_id: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
-    req = db.query(UnlockRequest).filter(UnlockRequest.id == request_id).first()
+    req = db.query(UnlockRequest).filter(str(UnlockRequest.id) == str(request_id)).first()
     if not req:
         raise HTTPException(status_code=400, detail="Request not found")
-    if req.status != "pending":
-        raise HTTPException(status_code=400, detail="Request already processed")
     
     content = db.query(ContentItem).filter(ContentItem.id == req.content_id).first()
-    price = content.price if content else 0
-    
     req.status = "approved"
-    req.amount = price
+    req.amount = content.price if content else 0
     
-    unlock = UnlockContent(
-        user_id=req.user_id,
-        content_id=req.content_id
-    )
-    db.add(unlock)
+    existing = db.query(UnlockContent).filter(
+        UnlockContent.user_id == req.user_id,
+        UnlockContent.content_id == req.content_id
+    ).first()
+    if not existing:
+        db.add(UnlockContent(user_id=req.user_id, content_id=req.content_id))
+    
     db.commit()
-    
     return {"message": "Unlock approved"}
 
 
@@ -72,11 +135,9 @@ def reject_unlock(
     db: Session = Depends(get_db),
     current_user: dict = Depends(admin_only)
 ):
-    req = db.query(UnlockRequest).filter(UnlockRequest.id == request_id).first()
+    req = db.query(UnlockRequest).filter(str(UnlockRequest.id) == str(request_id)).first()
     if not req:
         raise HTTPException(status_code=400, detail="Request not found")
-    if req.status != "pending":
-        raise HTTPException(status_code=400, detail="Request already processed")
 
     req.status = "rejected"
     db.commit()
