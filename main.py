@@ -21,6 +21,16 @@ async def cors_middleware(request: Request, call_next):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return response
 
+@app.options("/api/{rest_of_path:path}")
+async def options_handler(rest_of_path: str):
+    return Response(
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
