@@ -2,11 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, base
 from app import models
-from app.routers import auth, content, unlock, admin
+# Fixed import path:
+from routers import auth, content, unlock, admin
 
 app = FastAPI(title="Suraj Sir Backend")
 
-# Standard CORS setup (handles OPTIONS preflight automatically)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
