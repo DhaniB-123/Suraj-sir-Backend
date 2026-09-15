@@ -39,13 +39,14 @@ def get_unlock_requests(
     requests = db.query(UnlockRequest).all()
     return JSONResponse(
         content=[{
-            "id": str(r.id),
-            "status": r.status,
-            "user_id": str(r.user_id),
-            "content_id": str(r.content_id),
-            "amount": r.amount,
-            "created_at": str(r.created_at)
-        } for r in requests],
+        "id": str(r.id),
+        "status": r.status,
+        "user_id": str(r.user_id),
+        "content_id": str(r.content_id),
+        "amount": r.amount,
+        "created_at": str(r.created_at),
+        "student_phone": db.query(User).filter(User.id == r.user_id).first().phone if db.query(User).filter(User.id == r.user_id).first() else "Unknown"
+    } for r in requests],
         headers={"Access-Control-Allow-Origin": "*"}
     )
 
