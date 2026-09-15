@@ -8,6 +8,7 @@ import cloudinary.uploader
 from fastapi import UploadFile, File
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
+from app.models import User
 import os
 
 cloudinary.config(
