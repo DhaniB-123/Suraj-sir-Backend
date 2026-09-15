@@ -9,7 +9,12 @@ app = FastAPI(title="Suraj Sir Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+    "*",
+    "https://lovable.dev",
+    "https://*.lovable.app",
+    "https://dfd862e1-b7c3-4c11-9df4-3c96b295cce2.lovable.app"
+],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
