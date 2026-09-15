@@ -6,6 +6,8 @@ from app.dependencies import admin_only
 import cloudinary
 import cloudinary.uploader
 from fastapi import UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
 import os
 
 cloudinary.config(
@@ -15,6 +17,18 @@ cloudinary.config(
 )
 
 router = APIRouter(prefix="/admin",tags=["Admin"])
+
+
+@router.options("/{path:path}")
+async def admin_options(path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 
 @router.get("/unlock-requests")
