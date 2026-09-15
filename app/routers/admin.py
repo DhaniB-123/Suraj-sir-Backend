@@ -32,9 +32,22 @@ async def admin_options(path: str):
 
 
 @router.get("/unlock-requests")
-def get_unlock_request(db : Session = Depends(get_db),current_user : dict = Depends(admin_only)):
+def get_unlock_requests(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(admin_only)
+):
     requests = db.query(UnlockRequest).all()
-    return requests
+    return JSONResponse(
+        content=[{
+            "id": str(r.id),
+            "status": r.status,
+            "user_id": str(r.user_id),
+            "content_id": str(r.content_id),
+            "amount": r.amount,
+            "created_at": str(r.created_at)
+        } for r in requests],
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 @router.post("/unlock-requests/{request_id}/approve")
 def approve_unlock(
